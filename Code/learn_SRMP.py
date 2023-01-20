@@ -1256,6 +1256,18 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
         probabilities /= numpy.sum(probabilities)
         selected_indices = numpy.random.choice(range(len(population)), nb_solutions, p=probabilities, replace=False)
         selected_solutions = [population[i] for i in selected_indices]
+
+    elif strategy == "dpp" :
+        pass
+
+    elif strategy == "uniform":
+        pass
+
+    elif strategy == "kmeans":
+        pass
+
+    elif strategy == "max_distance":
+        pass
     
     # Weird choice
     else :
