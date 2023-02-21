@@ -22,7 +22,7 @@ import random
 # Hyperparameters optimization
 NB_TESTS = 10
 VERBOSE = True
-OUTPUT = "./tune_parameters_fixed_multi_after_grid.csv"
+OUTPUT = "tune_parameters_fixed_multi_after_grid_l1.csv"
 
 # Hyperparameters to optimize
 HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
@@ -45,7 +45,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--prepare_new_population__elitism_ratio" : {"init" : 0.4}, # Fixed
                    "--prepare_new_population__random_ratio" : {"init" : 0.1}, # Fixed
                    "--select_solutions__nb_solutions" : {"init" : 2}, # Fixed
-                   "--select_solutions__strategy" : {"init" : "roulette"}, # Fixed
+                   "--select_solutions__strategy" : {"init" : "l2-norm"}, # l1-norm,dpp,kmeans,uniform,roulette," "
                    "--make_crossover__crossover_swap_weights_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_orders_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_profiles_probability" : {"init" : 0.0}, # Fixed
@@ -79,7 +79,7 @@ def run_experiment (arguments, output) :
     for seed in range(NB_TESTS) :
         if VERBOSE : print("%d/%d" % (seed+1, NB_TESTS), end="", flush=True)
         arguments["--random_seed"] = seed
-        command = "python3 learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments)
+        command = "python learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode("utf-8")
         result = ast.literal_eval(result)
         for entry in result :
@@ -99,7 +99,7 @@ def run_experiment (arguments, output) :
 
 # Work with the latest ipynb
 if len(sys.argv) == 1 :
-    command = ["ipynb-py-convert", "learn_SRMP.ipynb", "learn_SRMP.py"]
+    command = ["ipynb-py-convert","learn_SRMP.ipynb", "learn_SRMP.py"]
     subprocess.call(command)
 
 # Output file

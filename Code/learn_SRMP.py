@@ -26,7 +26,13 @@ import ast
 import sys
 import os
 import cProfile
+import time
 import pyprof2calltree
+from scipy.spatial import distance_matrix
+import random
+from scipy.spatial.distance import pdist, squareform
+from sklearn.cluster import KMeans
+from pydpp.dpp import DPP
 
 # %%
 """
@@ -140,7 +146,7 @@ _ = parser.add_argument("--select_solutions__nb_solutions",
 _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
-                        choices=["roulette"],
+                        choices=["l2-norm","l1-norm","kmeans","dpp","uniform","roulette"," "],
                         default="roulette")
 
 # %%
@@ -1250,6 +1256,18 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
     nb_solutions = get_arg_value("select_solutions__nb_solutions", nb_solutions)
     strategy = get_arg_value("select_solutions__strategy", strategy)
 
+    #Create empty list arr
+    arr = []
+
+    #Create list of decision makers, each dm is 1d array
+    for dm in range(len(population)):
+      profile = population[dm][1]["profiles"].flatten()
+      array_weight = numpy.concatenate((profile, population[dm][1]["weights"]))
+      arr.append(array_weight)
+
+    #Turn list to array
+    arr = numpy.array(arr)
+
     # Probabilities are based on fitness
     if strategy == "roulette" :
         probabilities = numpy.array([solution[0] for solution in population], dtype=float)
@@ -1257,9 +1275,93 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
         selected_indices = numpy.random.choice(range(len(population)), nb_solutions, p=probabilities, replace=False)
         selected_solutions = [population[i] for i in selected_indices]
     
+    elif strategy == "l2-norm" :
+
+      def compute_distance(decisionmakers):
+        distances = squareform(pdist(decisionmakers, metric='euclidean'))
+        return distances
+    
+      dpp = DPP(arr)
+      dpp.compute_kernel(kernel_func=compute_distance)
+      idx = dpp.sample_k(nb_solutions)
+    
+      #See which index points give us greatest distance.
+      selected_solutions = [population[i] for i in idx]
+
+    elif strategy == "l1-norm":
+
+      def compute_distance_l1(decisionmakers):
+        # Compute correspondance matrix of all decision makers L1 norm pairwise evaluation
+        distances = squareform(pdist(decisionmakers, metric='cityblock'))
+        return distances
+     
+      #Use dpp for l1 distance matrix
+      dpp = DPP(arr)
+      dpp.compute_kernel(kernel_func=compute_distance_l1)
+      idx = dpp.sample_k(nb_solutions)
+      
+      #See which index points give us greatest distance.
+      selected_solutions = [population[i] for i in idx]
+
+    elif strategy == "kmeans":
+
+      kmeans = KMeans(n_clusters=nb_solutions,init = 'k-means++',n_init= 'auto', random_state=42).fit(arr)
+      labels = kmeans.predict(arr)
+      cntr = kmeans.cluster_centers_
+
+      approx = []
+
+      for i, c in enumerate(cntr):
+        lab = numpy.where(labels == i)[0]
+        pts = arr[lab]
+        d = distance_matrix(c[None, ...], pts)
+        idx1 = numpy.argmin(d, axis=1) + 1
+        idx2 = numpy.searchsorted(numpy.cumsum(labels == i), idx1)[0]
+        approx.append(idx2)
+
+      #See which index points give us greatest distance.
+      selected_solutions = [population[i] for i in approx]
+
+    elif strategy == "dpp":
+
+      dpp = DPP(arr)
+      dpp.compute_kernel(kernel_type = 'rbf', sigma= 0.4)
+      idx = dpp.sample_k(nb_solutions)
+      selected_solutions = [population[i] for i in idx]
+    
+    elif strategy == "uniform":
+
+      # Generate random indices within the range of the flattened array
+      rand_indices = numpy.random.randint(0, len(arr), size=nb_solutions)
+      selected_solutions = [population[i] for i in rand_indices]
+
     # Weird choice
-    else :
-        raise Exception("Unimplemented strategy '" + strategy + "' for function 'select_solutions'")
+    else:
+
+      # get distances between all points
+      d = distance_matrix(arr, arr)
+      # zero the identical upper triangle
+      dt = numpy.tril(d)
+      # list the distances and their indexes
+      dtv = [(dt[i, j], i, j) for (i, j) in numpy.argwhere(dt > 0)]
+      # sort the list
+      dtvs = sorted(dtv, key=lambda x: x[0], reverse=True)
+
+      #Create empty set
+      kpoint_index = set()
+      #Choose number of indicies
+      k = nb_solutions
+      #Initialize distance index
+      i = 0
+
+      #Create set of 3 indicies(index position) that show greatest distance
+      for p in (j for i in dtvs for j in i[1:]):
+        kpoint_index.add(p)
+        if len(kpoint_index) == k:
+          break
+    
+      #See which index points give us greatest distance.
+      selected_solutions = [population[i] for i in kpoint_index]
     
     # Done
     return selected_solutions
@@ -1547,7 +1649,9 @@ if ARGS.debug_mode :
 # Solve the problem
 if ARGS.debug_mode :
     start_profiling()
-estimated_decision_makers = estimate_decision_maker(training_set, nb_profiles=ARGS.nb_profiles, test_sets=test_sets)
+start_time = time.process_time()
+estimated_decision_makers = estimate_decision_maker(training_set, test_sets=test_sets)
+stop_time = time.process_time()
 if ARGS.debug_mode :
     stop_profiling()
 
@@ -1560,6 +1664,7 @@ if ARGS.debug_mode :
 # %%
 # We output the best model final performance on all datasets
 results = {}
+results["time"] = stop_time - start_time
 results["train"] = estimated_decision_makers[0][0]
 if len(test_set_1) > 0 :
     results["test_1"] = compute_fitness(estimated_decision_makers[0][1], test_set_1)
