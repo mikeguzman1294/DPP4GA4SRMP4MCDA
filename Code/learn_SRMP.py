@@ -146,8 +146,8 @@ _ = parser.add_argument("--select_solutions__nb_solutions",
 _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
-                        choices=["l2-norm","l1-norm","kmeans","dpp","uniform","roulette"," "],
-                        default="roulette")
+                        choices=["l2-norm","l1-norm","kmeans","dpp","uniform","roulette","roulette+dpp"," "],
+                        default="roulette+dpp")
 
 # %%
 # Default arguments of function 'make_crossover'
@@ -1335,6 +1335,31 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
       rand_indices = numpy.random.randint(0, len(arr), size=nb_solutions)
       selected_solutions = [population[i] for i in rand_indices]
 
+    elif strategy == "roulette+dpp":
+
+      # Apply the roulette strategy first to keep the best third of the population
+      nb_solutions_roulette = int(len(population)/3)
+      probabilities = numpy.array([solution[0] for solution in population], dtype=float)
+      probabilities /= numpy.sum(probabilities)
+      selected_indices = numpy.random.choice(range(len(population)), nb_solutions_roulette, p=probabilities, replace=False)
+      roulette_population = [population[i] for i in selected_indices]
+
+      # Create a the Decision makers array used for the DPP with the roulette propulation just selected
+      dm_array = []
+      #Create list of decision makers, each dm is 1d array
+      for dm in range(len(roulette_population)):
+        profile = roulette_population[dm][1]["profiles"].flatten()
+        array_weight = numpy.concatenate((profile, population[dm][1]["weights"]))
+        dm_array.append(array_weight)
+      #Turn list to array
+      dm_array = numpy.array(dm_array)
+      
+      # Apply the DPP strategy to select the final solutions among the roulette population
+      dpp = DPP(dm_array)
+      dpp.compute_kernel(kernel_type = 'rbf', sigma= 0.4)
+      dpp_idx = dpp.sample_k(nb_solutions)
+      selected_solutions = [roulette_population[i] for i in dpp_idx]
+    
     # Weird choice
     else:
 
