@@ -26,7 +26,15 @@ import ast
 import sys
 import os
 import cProfile
+import time
 import pyprof2calltree
+import functools # For creaing a user-defined comparison operator
+from scipy import stats # For Kendall Tau
+import subprocess # For importing missing libraries real-time
+try:
+    from pydpp.dpp import DPP # Implements DPP
+except:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pydpp'])
 
 # %%
 """
@@ -1231,7 +1239,89 @@ def compute_fitness (solution, expected_results) :
     return fitness
 
 # %%
-def select_solutions (population, nb_solutions=None, strategy=None) :
+def rank_decision_maker_alternatives (decision_maker, alternatives) :
+
+    ###########################################################################################################
+    """
+        Ranks all alternatives according to given decision maker.
+        --
+        In:
+            * decision_maker: Reference decision maker used to rank alternatives.
+            * alternatives: List of alternatives to rank.
+        Out:
+            * ranking_vector: Vector containing the alternatives ranking for a given position maker where the first element is the best ranked alternative.
+    """
+    ###########################################################################################################
+
+    # Inner user-defined comparison operator
+    def compare(alternative_1, alternative_2):
+
+      # No preference among alternatives
+      if ( check_preference(decision_maker, alternative_1, alternative_2)[0] is None ):
+        return 0
+      # Alternative 1 > alternative 2
+      elif ( alternative_1['id'] == check_preference(decision_maker, alternative_1, alternative_2)[0]['id'] ):
+        return 1
+      # Alternative 2 > alternative 1
+      else:
+        return -1
+
+    # Sort (O(nlogn)) with user-defined comparison operator
+    ranked_alternatives = sorted(alternatives, key=functools.cmp_to_key(compare))
+    
+    # Extract vector with only ranked alternatives
+    ranking_vector = [ alternative['id'] for alternative in ranked_alternatives ]
+
+    #Done
+    return ranking_vector
+
+# %%
+def compute_population_rankings (population, alternatives) :
+
+    ###########################################################################################################
+    """
+        Computes the ranking of all the alternatives for every solution in the population.
+        --
+        In:
+            * population: Population of solutions of a given generation along with their fitnesses.
+            * alternatives: List of alternatives to rank.
+        Out:
+            * population_rankings: List of ranked alternatives vectors for all solutions.
+    """
+    ###########################################################################################################
+    
+    # Create empty list of rankings
+    population_rankings = []
+
+    # Append the ranking vector of each decision maker in population
+    for solution in population:    
+      population_rankings.append( rank_decision_maker_alternatives(solution[1], alternatives) )
+
+    # Done
+    return population_rankings
+
+# %%
+def compute_similarity_matrix (rankings) :
+
+    ###########################################################################################################
+    """
+        Constructs a similarity matrix for the population where the similarity metric is Kendall Tau correspondance between rankings.
+        --
+        In:
+            * rankings: List of ranked alternatives vectors for all solutions.
+        Out:
+            * similarity_matrix: Matrix containing the pairwise Kendall Tau correspondance of all solutions' rankings.
+    """
+    ###########################################################################################################
+
+    # Compute similarity matrix of all decision makers Kendall Tau's pairwise evaluation
+    similarity_matrix = numpy.array( [ [ ( (stats.kendalltau(p1, p2)[0] + 1) / 2  ) for p2 in rankings ] for p1 in rankings ] )
+
+    #Done
+    return similarity_matrix
+
+# %%
+def select_solutions (population, alternatives, nb_solutions=None, strategy=None) :
 
     ###########################################################################################################
     """
@@ -1239,6 +1329,7 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
         --
         In:
             * population: Population of solutions from where to pick solutions, along with their fitnesses.
+            * alternatives: List of alternatives to compare.
             * nb_solutions: Number of solutions to return.
             * strategy: Strategy to use to select solutions.
         Out:
@@ -1257,17 +1348,13 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
         selected_indices = numpy.random.choice(range(len(population)), nb_solutions, p=probabilities, replace=False)
         selected_solutions = [population[i] for i in selected_indices]
 
-    elif strategy == "dpp" :
-        pass
-
-    elif strategy == "uniform":
-        pass
-
-    elif strategy == "kmeans":
-        pass
-
-    elif strategy == "max_distance":
-        pass
+    # Use a Kendall Tau based similarity matrix of all decision makers as a DPP kernel
+    elif strategy == "kendall-tau" :
+        rankings = compute_population_rankings(population, alternatives)
+        dpp = DPP(rankings)
+        dpp.compute_kernel(kernel_func=compute_similarity_matrix)
+        selected_indices = dpp.sample_k(nb_solutions)
+        selected_solutions = [population[i] for i in selected_indices]
     
     # Weird choice
     else :
@@ -1559,7 +1646,9 @@ if ARGS.debug_mode :
 # Solve the problem
 if ARGS.debug_mode :
     start_profiling()
-estimated_decision_makers = estimate_decision_maker(training_set, nb_profiles=ARGS.nb_profiles, test_sets=test_sets)
+start_time = time.process_time()
+estimated_decision_makers = estimate_decision_maker(training_set, test_sets=test_sets)
+stop_time = time.process_time()
 if ARGS.debug_mode :
     stop_profiling()
 
@@ -1572,14 +1661,12 @@ if ARGS.debug_mode :
 # %%
 # We output the best model final performance on all datasets
 results = {}
+results["time"] = stop_time - start_time
 results["train"] = estimated_decision_makers[0][0]
 if len(test_set_1) > 0 :
     results["test_1"] = compute_fitness(estimated_decision_makers[0][1], test_set_1)
 if len(test_set_2) > 0 :
     results["test_2"] = compute_fitness(estimated_decision_makers[0][1], test_set_2)
 print(results)
-
-# %%
-
 
 # %%
