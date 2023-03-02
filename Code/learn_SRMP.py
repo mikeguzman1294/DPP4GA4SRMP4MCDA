@@ -1235,7 +1235,35 @@ def compute_fitness (solution, expected_results) :
     
     # Done
     return fitness
+# %%
+def create_flatten_dm(population):
 
+    ###########################################################################################################
+    """
+        Creates numpy 2D-array whose elements are flattened 1d-array decision makers. 
+        The elements of each decision-maker consist of profiles and weights.
+        --
+        In:
+            * population: Population to draw profiles and weights.
+            
+        Out:
+            * arr: 2D numpy array.
+    """
+    ###########################################################################################################
+
+    #Create empty list arr
+    arr = []
+
+    #Create list of decision makers, each dm is 1d array
+    for dm in range(len(population)):
+      profile = population[dm][1]["profiles"].flatten()
+      array_weight = numpy.concatenate((profile, population[dm][1]["weights"]))
+      arr.append(array_weight)
+
+    #Turn list to array
+    arr = numpy.array(arr)
+    #Done
+    return arr
 # %%
 def select_solutions (population, nb_solutions=None, strategy=None) :
 
@@ -1256,18 +1284,6 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
     nb_solutions = get_arg_value("select_solutions__nb_solutions", nb_solutions)
     strategy = get_arg_value("select_solutions__strategy", strategy)
 
-    #Create empty list arr
-    arr = []
-
-    #Create list of decision makers, each dm is 1d array
-    for dm in range(len(population)):
-      profile = population[dm][1]["profiles"].flatten()
-      array_weight = numpy.concatenate((profile, population[dm][1]["weights"]))
-      arr.append(array_weight)
-
-    #Turn list to array
-    arr = numpy.array(arr)
-
     # Probabilities are based on fitness
     if strategy == "roulette" :
         probabilities = numpy.array([solution[0] for solution in population], dtype=float)
@@ -1281,7 +1297,7 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
         distances = squareform(pdist(decisionmakers, metric='euclidean'))
         return distances
     
-      dpp = DPP(arr)
+      dpp = DPP(create_flatten_dm(population))
       dpp.compute_kernel(kernel_func=compute_distance)
       idx = dpp.sample_k(nb_solutions)
     
@@ -1296,7 +1312,7 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
         return distances
      
       #Use dpp for l1 distance matrix
-      dpp = DPP(arr)
+      dpp = DPP(create_flatten_dm(population))
       dpp.compute_kernel(kernel_func=compute_distance_l1)
       idx = dpp.sample_k(nb_solutions)
       
@@ -1305,15 +1321,15 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
 
     elif strategy == "kmeans":
 
-      kmeans = KMeans(n_clusters=nb_solutions,init = 'k-means++',n_init= 'auto', random_state=42).fit(arr)
-      labels = kmeans.predict(arr)
+      kmeans = KMeans(n_clusters=nb_solutions,init = 'k-means++',n_init= 'auto', random_state=42).fit(create_flatten_dm(population))
+      labels = kmeans.predict(create_flatten_dm(population))
       cntr = kmeans.cluster_centers_
 
       approx = []
 
       for i, c in enumerate(cntr):
         lab = numpy.where(labels == i)[0]
-        pts = arr[lab]
+        pts = create_flatten_dm(population)[lab]
         d = distance_matrix(c[None, ...], pts)
         idx1 = numpy.argmin(d, axis=1) + 1
         idx2 = numpy.searchsorted(numpy.cumsum(labels == i), idx1)[0]
@@ -1324,7 +1340,7 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
 
     elif strategy == "dpp":
 
-      dpp = DPP(arr)
+      dpp = DPP(create_flatten_dm(population))
       dpp.compute_kernel(kernel_type = 'rbf', sigma= 0.4)
       idx = dpp.sample_k(nb_solutions)
       selected_solutions = [population[i] for i in idx]
@@ -1332,7 +1348,7 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
     elif strategy == "uniform":
 
       # Generate random indices within the range of the flattened array
-      rand_indices = numpy.random.randint(0, len(arr), size=nb_solutions)
+      rand_indices = numpy.random.randint(0, len(create_flatten_dm(population)), size=nb_solutions)
       selected_solutions = [population[i] for i in rand_indices]
 
     elif strategy == "roulette+dpp":
@@ -1364,7 +1380,7 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
     else:
 
       # get distances between all points
-      d = distance_matrix(arr, arr)
+      d = distance_matrix(create_flatten_dm(population), create_flatten_dm(population))
       # zero the identical upper triangle
       dt = numpy.tril(d)
       # list the distances and their indexes
