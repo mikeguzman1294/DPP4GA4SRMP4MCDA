@@ -45,7 +45,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--prepare_new_population__elitism_ratio" : {"init" : 0.4}, # Fixed
                    "--prepare_new_population__random_ratio" : {"init" : 0.1}, # Fixed
                    "--select_solutions__nb_solutions" : {"init" : 2}, # Fixed
-                   "--select_solutions__strategy" : {"init" : "roulette+dpp"}, # l1-norm, dpp, kmeans, uniform, roulette, roulette+dpp, " "
+                   "--select_solutions__strategy" : {"init" : "roulette+dpp"}, # l1-norm, dpp, kmeans, uniform, roulette, roulette+dpp, "distance_matrix"
                    "--make_crossover__crossover_swap_weights_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_orders_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_profiles_probability" : {"init" : 0.0}, # Fixed

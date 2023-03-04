@@ -146,7 +146,7 @@ _ = parser.add_argument("--select_solutions__nb_solutions",
 _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
-                        choices=["l2-norm","l1-norm","kmeans","dpp","uniform","roulette","roulette+dpp"," "],
+                        choices=["l2-norm","l1-norm","kmeans","dpp","uniform","roulette","roulette+dpp","distance_matrix"],
                         default="roulette+dpp")
 
 # %%
@@ -1252,18 +1252,18 @@ def create_flatten_dm(population):
     ###########################################################################################################
 
     #Create empty list arr
-    arr = []
+    flatten_decision_maker = []
 
     #Create list of decision makers, each dm is 1d array
     for dm in range(len(population)):
       profile = population[dm][1]["profiles"].flatten()
       array_weight = numpy.concatenate((profile, population[dm][1]["weights"]))
-      arr.append(array_weight)
+      flatten_decision_maker.append(array_weight)
 
     #Turn list to array
-    arr = numpy.array(arr)
+    flatten_decision_maker = numpy.array(flatten_decision_maker)
     #Done
-    return arr
+    return flatten_decision_maker
 # %%
 def select_solutions (population, nb_solutions=None, strategy=None) :
 
@@ -1377,7 +1377,7 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
       selected_solutions = [roulette_population[i] for i in dpp_idx]
     
     # Weird choice
-    else:
+    elif strategy == "distance_matrix":
 
       # get distances between all points
       d = distance_matrix(create_flatten_dm(population), create_flatten_dm(population))
@@ -1403,6 +1403,9 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
     
       #See which index points give us greatest distance.
       selected_solutions = [population[i] for i in kpoint_index]
+
+    else:
+      pass
     
     # Done
     return selected_solutions
