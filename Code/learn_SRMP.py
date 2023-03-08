@@ -33,6 +33,7 @@ import random
 from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import KMeans
 from pydpp.dpp import DPP
+import scipy
 
 # %%
 """
@@ -1235,6 +1236,7 @@ def compute_fitness (solution, expected_results) :
     
     # Done
     return fitness
+
 # %%
 def create_flatten_dm(population):
 
@@ -1264,6 +1266,7 @@ def create_flatten_dm(population):
     flatten_decision_maker = numpy.array(flatten_decision_maker)
     #Done
     return flatten_decision_maker
+
 # %%
 def select_solutions (population, nb_solutions=None, strategy=None) :
 
@@ -1295,7 +1298,8 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
 
       def compute_distance(decisionmakers):
         distances = squareform(pdist(decisionmakers, metric='euclidean'))
-        return distances
+        similarity_matrix = 1/scipy.exp(distances)
+        return similarity_matrix
     
       dpp = DPP(create_flatten_dm(population))
       dpp.compute_kernel(kernel_func=compute_distance)
@@ -1309,7 +1313,9 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
       def compute_distance_l1(decisionmakers):
         # Compute correspondance matrix of all decision makers L1 norm pairwise evaluation
         distances = squareform(pdist(decisionmakers, metric='cityblock'))
-        return distances
+        normalized_matrix = distances / distances.max()
+        similarity_matrix = 1- normalized_matrix
+        return similarity_matrix
      
       #Use dpp for l1 distance matrix
       dpp = DPP(create_flatten_dm(population))
@@ -1403,10 +1409,10 @@ def select_solutions (population, nb_solutions=None, strategy=None) :
     
       #See which index points give us greatest distance.
       selected_solutions = [population[i] for i in kpoint_index]
-
+      
     else:
       pass
-    
+
     # Done
     return selected_solutions
 
