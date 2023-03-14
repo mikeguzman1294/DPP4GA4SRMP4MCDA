@@ -148,8 +148,13 @@ _ = parser.add_argument("--select_solutions__nb_solutions",
 _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
-                        choices=["roulette"],
+                        choices=["roulette", "DPP"],
                         default="roulette")
+_ = parser.add_argument("--select_solutions__similarity_metric",
+                        help="Argument 'metric' of function 'compute_similarity_matrix'",
+                        type=str,
+                        choices=["kendall-tau", "spearman-rho"],
+                        default="kendall-tau")
 
 # %%
 # Default arguments of function 'make_crossover'
@@ -1301,27 +1306,37 @@ def compute_population_rankings (population, alternatives) :
     return population_rankings
 
 # %%
-def compute_similarity_matrix (rankings) :
+def compute_similarity_matrix (rankings, metric) :
 
     ###########################################################################################################
     """
-        Constructs a similarity matrix for the population where the similarity metric is Kendall Tau correspondance between rankings.
+        Constructs a similarity matrix for the population given a similarity metric between rankings.
         --
         In:
             * rankings: List of ranked alternatives vectors for all solutions.
+            * metric: Similarity metric used to compare alternative rankings.
         Out:
-            * similarity_matrix: Matrix containing the pairwise Kendall Tau correspondance of all solutions' rankings.
+            * similarity_matrix: Matrix containing the pairwise similarity of all solutions' rankings.
     """
     ###########################################################################################################
 
-    # Compute similarity matrix of all decision makers Kendall Tau's pairwise evaluation
-    similarity_matrix = numpy.array( [ [ ( (stats.kendalltau(p1, p2)[0] + 1) / 2  ) for p2 in rankings ] for p1 in rankings ] )
+    # Compute similarity matrix of all decision makers' Kendall Tau's pairwise evaluation
+    if metric == "kendall-tau":
+        similarity_matrix = numpy.array( [ [ ( (stats.kendalltau(p1, p2)[0] + 1) / 2  ) for p2 in rankings ] for p1 in rankings ] )
+
+    # Compute similarity matrix of all decision makers' Spearman Rho's pairwise evaluation
+    elif metric == "spearman-rho":
+        similarity_matrix = numpy.array( [ [ ( (stats.spearmanr(p1, p2)[0] + 1) / 2  ) for p2 in rankings ] for p1 in rankings ] )
+
+    # Weird choice
+    else :
+        raise Exception("Unimplemented metric '" + metric + "' for function 'compute_similarity_matrix'")
 
     #Done
     return similarity_matrix
 
 # %%
-def select_solutions (population, alternatives, nb_solutions=None, strategy=None) :
+def select_solutions (population, alternatives, nb_solutions=None, strategy=None, metric=None) :
 
     ###########################################################################################################
     """
@@ -1332,6 +1347,7 @@ def select_solutions (population, alternatives, nb_solutions=None, strategy=None
             * alternatives: List of alternatives to compare.
             * nb_solutions: Number of solutions to return.
             * strategy: Strategy to use to select solutions.
+            * metric: Similarity metric used to compare alternative rankings.
         Out:
             * selected_solutions: Picked solutions.
     """
@@ -1340,6 +1356,7 @@ def select_solutions (population, alternatives, nb_solutions=None, strategy=None
     # Retrieve command line default arguments
     nb_solutions = get_arg_value("select_solutions__nb_solutions", nb_solutions)
     strategy = get_arg_value("select_solutions__strategy", strategy)
+    metric = get_arg_value("select_solutions__similarity_metric", metric)
 
     # Probabilities are based on fitness
     if strategy == "roulette" :
@@ -1348,14 +1365,14 @@ def select_solutions (population, alternatives, nb_solutions=None, strategy=None
         selected_indices = numpy.random.choice(range(len(population)), nb_solutions, p=probabilities, replace=False)
         selected_solutions = [population[i] for i in selected_indices]
 
-    # Use a Kendall Tau based similarity matrix of all decision makers as a DPP kernel
-    elif strategy == "kendall-tau" :
+    # Use a metric-based similarity matrix of all decision makers as a DPP-sampling kernel to encourage diversity
+    elif strategy == "DPP" :
         rankings = compute_population_rankings(population, alternatives)
         dpp = DPP(rankings)
-        dpp.compute_kernel(kernel_func=compute_similarity_matrix)
+        dpp.compute_kernel(kernel_func= lambda x : compute_similarity_matrix(x, metric))
         selected_indices = dpp.sample_k(nb_solutions)
         selected_solutions = [population[i] for i in selected_indices]
-    
+
     # Weird choice
     else :
         raise Exception("Unimplemented strategy '" + strategy + "' for function 'select_solutions'")
