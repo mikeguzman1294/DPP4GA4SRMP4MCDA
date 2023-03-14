@@ -148,8 +148,8 @@ _ = parser.add_argument("--select_solutions__nb_solutions",
 _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
-                        choices=["roulette", "DPP"],
-                        default="roulette")
+                        choices=["roulette", "DPP", "roulette+DPP"],
+                        default="roulette+DPP")
 _ = parser.add_argument("--select_solutions__similarity_metric",
                         help="Argument 'metric' of function 'compute_similarity_matrix'",
                         type=str,
@@ -1368,6 +1368,23 @@ def select_solutions (population, alternatives, nb_solutions=None, strategy=None
     # Use a metric-based similarity matrix of all decision makers as a DPP-sampling kernel to encourage diversity
     elif strategy == "DPP" :
         rankings = compute_population_rankings(population, alternatives)
+        dpp = DPP(rankings)
+        dpp.compute_kernel(kernel_func= lambda x : compute_similarity_matrix(x, metric))
+        selected_indices = dpp.sample_k(nb_solutions)
+        selected_solutions = [population[i] for i in selected_indices]
+
+    # Combine roulette and DPP strategies to first favor sampling fit individuals and then prioritize diversity among the subset
+    elif strategy == "roulette+DPP" :
+
+        # Roulette subsetting of one third of a given population
+        nb_solutions_roulette = int(len(population) / 3)
+        probabilities = numpy.array([solution[0] for solution in population], dtype=float)
+        probabilities /= numpy.sum(probabilities)
+        roulette_indices = numpy.random.choice(range(len(population)), nb_solutions_roulette, p=probabilities, replace=False)
+        roulette_solutions = [population[i] for i in roulette_indices]
+
+        # DPP sampling
+        rankings = compute_population_rankings(roulette_solutions, alternatives)
         dpp = DPP(rankings)
         dpp.compute_kernel(kernel_func= lambda x : compute_similarity_matrix(x, metric))
         selected_indices = dpp.sample_k(nb_solutions)
