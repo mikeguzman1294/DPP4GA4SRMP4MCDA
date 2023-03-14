@@ -1469,7 +1469,7 @@ def keep_or_drop_children (parents, children, survival_probability=None) :
     return kept_children
 
 # %%
-def estimate_decision_maker (expected_results, test_sets=[], return_k_best=None, population_size=None, stop_after_non_evolving=None, check_identical_ratio=None, nb_profiles=None) :
+def estimate_decision_maker (expected_results, alternatives, test_sets=[], return_k_best=None, population_size=None, stop_after_non_evolving=None, check_identical_ratio=None, nb_profiles=None) :
 
     ###########################################################################################################
     """
@@ -1477,6 +1477,7 @@ def estimate_decision_maker (expected_results, test_sets=[], return_k_best=None,
         --
         In:
             * expected_results: Provided comparisons, along with their preference relation.
+            * alternatives: List of alternatives to compute decision maker ranking vectors.
             * test_sets: Test sets to evaluate decision maker on for summaries.
             * return_k_best: Number of best profiles to return.
             * population_size: Number of elements in the population for the GA.
@@ -1529,7 +1530,7 @@ def estimate_decision_maker (expected_results, test_sets=[], return_k_best=None,
         while len(new_population) < len(population) :
         
             # We select solutions to mix
-            parents = select_solutions(population)
+            parents = select_solutions(population, alternatives)
             
             # We create children
             children = make_crossover(parents)
@@ -1647,7 +1648,7 @@ if ARGS.debug_mode :
 if ARGS.debug_mode :
     start_profiling()
 start_time = time.process_time()
-estimated_decision_makers = estimate_decision_maker(training_set, test_sets=test_sets)
+estimated_decision_makers = estimate_decision_maker(training_set, alternatives, test_sets=test_sets)
 stop_time = time.process_time()
 if ARGS.debug_mode :
     stop_profiling()
