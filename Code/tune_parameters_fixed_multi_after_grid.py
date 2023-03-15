@@ -20,9 +20,10 @@ import numpy
 import random
 
 # Hyperparameters optimization
-NB_TESTS = 10
+NB_TESTS = 1
 VERBOSE = True
-OUTPUT = "./tune_parameters_fixed_multi_after_grid.csv"
+#OUTPUT = "./tune_parameters_fixed_multi_after_grid.csv"
+OUTPUT = "tune_parameters_fixed_multi_after_grid.csv"
 
 # Hyperparameters to optimize
 HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
@@ -58,7 +59,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--make_mutation__mutation_partially_reverse_order_probability" : {"init" : 0.2}, # Fixed
                    "--keep_or_drop_children__survival_probability" : {"init" : 0.0}, # Fixed
                    "--estimate_decision_maker__return_k_best" : {"init" : 1}, # Fixed
-                   "--estimate_decision_maker__population_size" : {"init" : 300}, # Fixed
+                   "--estimate_decision_maker__population_size" : {"init" : 100}, # Fixed ONLY CHANGED ORIGINAL 300
                    "--estimate_decision_maker__stop_after_non_evolving" : {"init" : 50}, # Fixed
                    "--estimate_decision_maker__check_identical_ratio" : {"init" : 0.1}, # Fixed
                    "--estimate_decision_maker__nb_profiles" : {"init" : 3}} # Fixed
@@ -79,7 +80,8 @@ def run_experiment (arguments, output) :
     for seed in range(NB_TESTS) :
         if VERBOSE : print("%d/%d" % (seed+1, NB_TESTS), end="", flush=True)
         arguments["--random_seed"] = seed
-        command = "python3 learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments)
+        #command = "python3 learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments)
+        command = "python learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode("utf-8")
         result = ast.literal_eval(result)
         for entry in result :
@@ -98,9 +100,9 @@ def run_experiment (arguments, output) :
 #####################################################################################################################################################
 
 # Work with the latest ipynb
-if len(sys.argv) == 1 :
+'''if len(sys.argv) == 1 :
     command = ["ipynb-py-convert", "learn_SRMP.ipynb", "learn_SRMP.py"]
-    subprocess.call(command)
+    subprocess.call(command)'''
 
 # Output file
 output = open(OUTPUT, "w", buffering=1)
