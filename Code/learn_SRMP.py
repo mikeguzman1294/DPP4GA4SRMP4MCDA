@@ -27,14 +27,19 @@ import sys
 import os
 import cProfile
 import time
-import pyprof2calltree
 import functools # For creaing a user-defined comparison operator
 from scipy import stats # For Kendall Tau
 import subprocess # For importing missing libraries real-time
 try:
+    import pyprof2calltree
+except:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pyprof2calltree'])
+    import pyprof2calltree
+try:
     from pydpp.dpp import DPP # Implements DPP
 except:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pydpp'])
+    from pydpp.dpp import DPP
 
 # %%
 """
@@ -133,11 +138,11 @@ _ = parser.add_argument("--mutation_expand_profiles__individual_criterion_proba"
 _ = parser.add_argument("--prepare_new_population__elitism_ratio",
                         help="Argument 'elitism_ratio' of function 'prepare_new_population'",
                         type=float,
-                        default=0.25)
+                        default=0.4)
 _ = parser.add_argument("--prepare_new_population__random_ratio",
                         help="Argument 'random_ratio' of function 'prepare_new_population'",
                         type=float,
-                        default=0.25)
+                        default=0.1)
 
 # %%
 # Default arguments of function 'select_solutions'
@@ -173,30 +178,30 @@ _ = parser.add_argument("--make_crossover__crossover_swap_profiles_probability",
 _ = parser.add_argument("--make_crossover__crossover_mix_criteria_probability",
                         help="Partial argument 'crossover_probability' of function 'make_crossover'",
                         type=float,
-                        default=0.0)
+                        default=0.5)
 _ = parser.add_argument("--make_crossover__crossover_mix_criteria_and_weights_probability",
                         help="Partial argument 'crossover_probability' of function 'make_crossover'",
                         type=float,
-                        default=1.0)
+                        default=0.5)
 
 # %%
 # Default arguments of function 'make_mutation'
 _ = parser.add_argument("--make_mutation__mutation_random_profile_perturbation_probability",
                         help="Partial argument 'mutation_probability' of function 'make_mutation'",
                         type=float,
-                        default=0.5)
+                        default=0.0)
 _ = parser.add_argument("--make_mutation__mutation_random_weights_perturbation_probability",
                         help="Partial argument 'mutation_probability' of function 'make_mutation'",
                         type=float,
-                        default=0.5)
+                        default=0.2)
 _ = parser.add_argument("--make_mutation__mutation_shrink_profiles_probability",
                         help="Partial argument 'mutation_probability' of function 'make_mutation'",
                         type=float,
-                        default=0.1)
+                        default=0.2)
 _ = parser.add_argument("--make_mutation__mutation_expand_profiles_probability",
                         help="Partial argument 'mutation_probability' of function 'make_mutation'",
                         type=float,
-                        default=0.1)
+                        default=0.0)
 _ = parser.add_argument("--make_mutation__mutation_partially_reverse_order_probability",
                         help="Partial argument 'mutation_probability' of function 'make_mutation'",
                         type=float,
@@ -207,7 +212,7 @@ _ = parser.add_argument("--make_mutation__mutation_partially_reverse_order_proba
 _ = parser.add_argument("--keep_or_drop_children__survival_probability",
                         help="Argument 'survival_probability' of function 'keep_or_drop_children'",
                         type=float,
-                        default=0.1)
+                        default=0.0)
 
 # %%
 # Default arguments of function 'estimate_decision_maker'

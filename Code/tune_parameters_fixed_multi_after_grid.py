@@ -20,10 +20,10 @@ import numpy
 import random
 
 # Hyperparameters optimization
-NB_TESTS = 1
+NB_TESTS = 10
 VERBOSE = True
 #OUTPUT = "./tune_parameters_fixed_multi_after_grid.csv"
-OUTPUT = "tune_parameters_fixed_multi_after_grid.csv"
+OUTPUT = "tune_parameters_fixed_multi_after_grid_KT.csv"
 
 # Hyperparameters to optimize
 HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
@@ -47,6 +47,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--prepare_new_population__random_ratio" : {"init" : 0.1}, # Fixed
                    "--select_solutions__nb_solutions" : {"init" : 2}, # Fixed
                    "--select_solutions__strategy" : {"init" : "roulette"}, # Fixed
+                   "--select_solutions__similarity_metric" : {"init" : "kendall-tau"}, # Fixed
                    "--make_crossover__crossover_swap_weights_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_orders_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_profiles_probability" : {"init" : 0.0}, # Fixed
@@ -59,7 +60,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--make_mutation__mutation_partially_reverse_order_probability" : {"init" : 0.2}, # Fixed
                    "--keep_or_drop_children__survival_probability" : {"init" : 0.0}, # Fixed
                    "--estimate_decision_maker__return_k_best" : {"init" : 1}, # Fixed
-                   "--estimate_decision_maker__population_size" : {"init" : 100}, # Fixed ONLY CHANGED ORIGINAL 300
+                   "--estimate_decision_maker__population_size" : {"init" : 300}, # Fixed ONLY CHANGED ORIGINAL 300
                    "--estimate_decision_maker__stop_after_non_evolving" : {"init" : 50}, # Fixed
                    "--estimate_decision_maker__check_identical_ratio" : {"init" : 0.1}, # Fixed
                    "--estimate_decision_maker__nb_profiles" : {"init" : 3}} # Fixed
@@ -100,9 +101,9 @@ def run_experiment (arguments, output) :
 #####################################################################################################################################################
 
 # Work with the latest ipynb
-'''if len(sys.argv) == 1 :
+if len(sys.argv) == 1 :
     command = ["ipynb-py-convert", "learn_SRMP.ipynb", "learn_SRMP.py"]
-    subprocess.call(command)'''
+    subprocess.call(command)
 
 # Output file
 output = open(OUTPUT, "w", buffering=1)
