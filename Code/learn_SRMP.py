@@ -1616,7 +1616,7 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                 
         # ONLY DEV
         end = time.time()
-        print(f'Iteration {iteration_number} took {end - start} seconds.\nNumber of iterations with no evolution: {nb_iterations_with_no_evolution}\n')
+        #print(f'Iteration {iteration_number} took {end - start} seconds.\nNumber of iterations with no evolution: {nb_iterations_with_no_evolution}\n')
         iteration_number += 1
 
     # Summary

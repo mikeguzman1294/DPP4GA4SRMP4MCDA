@@ -22,7 +22,7 @@ import random
 # Hyperparameters optimization
 NB_TESTS = 10
 VERBOSE = True
-OUTPUT = "tune_parameters_fixed_multi_after_grid_l1.csv"
+OUTPUT = "tune_parameters_fixed_multi_after_grid_dpp+roulette-l1.csv"
 
 # Hyperparameters to optimize
 HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
@@ -32,7 +32,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--nb_alternatives_test_set_2" : {"init" : 300}, # Fixed
                    "--nb_comparisons" : {"init" : 100}, # Fixed
                    "--debug_mode" : {"init" : False}, # Fixed
-                   "--random_seed" : {"init" : None}, # Will be set at hand
+                   "--random_seed" : {"init" : None}, 
                    "--output_directory" : {"init" : "."}, # Fixed
                    "--mutation_random_profile_perturbation__perturbation_scale" : {"init" : 0.1}, # Fixed
                    "--mutation_random_profile_perturbation__individual_criterion_proba" : {"init" : 1.0}, # Fixed
@@ -45,7 +45,8 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--prepare_new_population__elitism_ratio" : {"init" : 0.4}, # Fixed
                    "--prepare_new_population__random_ratio" : {"init" : 0.1}, # Fixed
                    "--select_solutions__nb_solutions" : {"init" : 2}, # Fixed
-                   "--select_solutions__strategy" : {"init" : "l1-norm"}, # l1-norm, dpp, kmeans, uniform, roulette, roulette+dpp, "distance_matrix"
+                   "--select_solutions__strategy" : {"init" : "DPP+roulette"}, # roulette, DPP, DPP+roulette
+                   "--select_solutions__similarity_metric" : {"init" : "l1-norm"}, # l1-norm, l2-norm
                    "--make_crossover__crossover_swap_weights_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_orders_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_profiles_probability" : {"init" : 0.0}, # Fixed
