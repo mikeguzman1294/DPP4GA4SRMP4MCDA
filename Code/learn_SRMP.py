@@ -79,7 +79,7 @@ _ = parser.add_argument("--nb_comparisons",
 _ = parser.add_argument("--debug_mode",
                         help="To add plots in the script",
                         type=ast.literal_eval,
-                        default=False)
+                        default=True)
 _ = parser.add_argument("--random_seed",
                         help="Experiment random seed",
                         type=int,
@@ -142,7 +142,7 @@ _ = parser.add_argument("--prepare_new_population__elitism_ratio",
 _ = parser.add_argument("--prepare_new_population__random_ratio",
                         help="Argument 'random_ratio' of function 'prepare_new_population'",
                         type=float,
-                        default=0.1)
+                        default=0.0)
 
 # %%
 # Default arguments of function 'select_solutions'
@@ -154,7 +154,7 @@ _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
                         choices=["roulette", "DPP", "DPP+roulette"],
-                        default="DPP")
+                        default="DPP+roulette")
 _ = parser.add_argument("--select_solutions__similarity_metric",
                         help="Argument 'metric' of function 'compute_similarity_matrix'",
                         type=str,
@@ -212,7 +212,7 @@ _ = parser.add_argument("--make_mutation__mutation_partially_reverse_order_proba
 _ = parser.add_argument("--keep_or_drop_children__survival_probability",
                         help="Argument 'survival_probability' of function 'keep_or_drop_children'",
                         type=float,
-                        default=0.0)
+                        default=0.05)
 
 # %%
 # Default arguments of function 'estimate_decision_maker'
@@ -223,7 +223,7 @@ _ = parser.add_argument("--estimate_decision_maker__return_k_best",
 _ = parser.add_argument("--estimate_decision_maker__population_size",
                         help="Argument 'population_size' of function 'estimate_decision_maker'",
                         type=int,
-                        default=300)
+                        default=100)
 _ = parser.add_argument("--estimate_decision_maker__stop_after_non_evolving",
                         help="Argument 'stop_after_non_evolving' of function 'estimate_decision_maker'",
                         type=int,
@@ -452,7 +452,7 @@ def plot_matrix (matrix, rows_labels="", cols_labels="", rows_title="", cols_tit
         figure.savefig(file_name, bbox_inches="tight")
 
 # %%
-def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", file_name=None) :
+def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", vertical_asymptote=None, vertical_asymptote_label="", file_name=None) :
 
     ###########################################################################################################
     """
@@ -466,6 +466,8 @@ def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", 
             * xlabel: X axis label.
             * ylabel: Y axis label.
             * title: Figure title.
+            * vertical_asymptote: Optional vertical asymptote.
+            * vertical_asymptote_label: Label of the optional vertical asymptote.
             * file_name: Where to save the results.
         Out:
             * None.
@@ -486,7 +488,10 @@ def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", 
     figure.gca().spines["right"].set_visible(False)
     figure.gca().spines["top"].set_visible(False)
     pyplot.tight_layout()
-    pyplot.show()
+    if vertical_asymptote is not None:
+        pyplot.axvline(x=vertical_asymptote, linewidth=2, color='green', label=vertical_asymptote_label)
+        pyplot.legend()
+    pyplot.show()    
     
     # Save
     if file_name is not None :
@@ -1341,6 +1346,36 @@ def compute_similarity_matrix (solutions_representation, metric) :
     return similarity_matrix
 
 # %%
+def compute_diversity (similarity_matrix) :
+
+    ###########################################################################################################
+    """
+        Computes the mean, standard deviation and variance of the similarity pairwise comparisons of a population.
+        --
+        In:
+            * similarity_matrix: Precomputed similarity matrix of a population following the global similarity metric.
+        Out:
+            * mean_similarity: Mean of pairwise comparisons of a population.
+            * std_similarity: Standard deviation of pairwise comparisons of a population.
+            * var_similarity: Variance of pairwise comparisons of a population.
+    """
+    ###########################################################################################################
+
+    # Zero the diagonal and the upper triangle of the similarity matrix
+    ltri= numpy.tril(similarity_matrix, k=-1)
+    
+    # Fit in a single vector all the non-zero values of the transformed matrix
+    ltri = ltri[numpy.nonzero(ltri)]
+    
+    # Compute the mean, the standard deviation and the variance of the vector
+    mean_similarity = ltri.mean()
+    std_similarity = ltri.std()
+    var_similarity = ltri.var()
+
+    # Done
+    return mean_similarity, std_similarity, var_similarity
+
+# %%
 def create_kDPP_model (population, metric, alternatives=None) :
 
     ###########################################################################################################
@@ -1565,16 +1600,16 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
     if ARGS.debug_mode :
         all_min_fitnesses, all_average_fitnesses, all_max_fitnesses = [], [], []
         test_sets_fitnesses = [[] for i in range(len(test_sets))]
-        mean_similarities = []
+        diversities = []
     
     # Generate an initial population, sorted in decreasing fitness
     population = generate_initial_population(population_size, nb_profiles, expected_results)
 
-    # ONLY DEV
-    iteration_number = 1
+    # Keep track of th iterations
+    nb_iterations = 0
+    nb_iterations_with_no_evolution = 0
     
     # Iterate "forever"
-    nb_iterations_with_no_evolution = 0
     while True :
 
         # ONLY DEV
@@ -1604,9 +1639,10 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
         
         # Measure diversity given the metric's similarity matrix mean coeficient
         if ARGS.debug_mode :
-            # We extract the kernel from the sampler
+            # We extract the similarity matrix from the sampler if it exists otherwise we compute it
             similarity_matrix = sampler.A if sampler is not None else create_kDPP_model(population, similarity_metric, alternatives=alternatives).A
-        
+            diversities.append(compute_diversity(similarity_matrix))
+            
         # We create new children until we have a new population
         while len(new_population) < len(population) :
         
@@ -1631,31 +1667,64 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
         population = new_population[:population_size]
 
         # Check if best training solutions generalize well
-        if ARGS.debug_mode :
+        '''if ARGS.debug_mode :
             if nb_iterations_with_no_evolution == 0 :
                 plot_bars([[solution[0] for solution in population]] + [[compute_fitness(solution[1], test_sets[i]) for solution in population] for i in range(len(test_sets))],
                           ["Train"] + ["Test " + str(i + 1) for i in range(len(test_sets))],
                           ["dm" + str(solution[1]["id"]) for solution in population],
                           "Fitness",
-                          "Population after iteration " + str(len(all_min_fitnesses)))
+                          "Population after iteration " + str(len(all_min_fitnesses)))'''
                 
         # ONLY DEV
         end = time.time()
-        #print(f'Iteration {iteration_number} took {end - start} seconds.\nNumber of iterations with no evolution: {nb_iterations_with_no_evolution}\n')
-        iteration_number += 1
+        print(f'Iteration {nb_iterations} took {end - start} seconds.\nNumber of iterations with no evolution: {nb_iterations_with_no_evolution}\n')
 
+        # Increase iteration number
+        nb_iterations += 1
+        
     # Summary
     if ARGS.debug_mode :
         dm_title = "Best estimated\nConcordance on training set: " + str(population[0][0])
         for i in range(len(test_sets)) :
             dm_title += "\nConcordance on test set " + str(i + 1) + ": " + str(test_sets_fitnesses[i][-1])
-        plot_decision_maker(population[0][1], title=dm_title)
+        plot_decision_maker(population[0][1], title=dm_title, file_name=ARGS.output_directory + "decision_maker_estimated.png")
         plot_curves([list(range(len(all_min_fitnesses)))] * (3 + len(test_sets)),
                     [all_max_fitnesses, all_average_fitnesses, all_min_fitnesses] + test_sets_fitnesses,
                     ["Max fitness in population on train set", "Average fitness in population on train set", "Min fitness in population on train set"] + ["Best model fitness on test set " + str(i + 1) for i in range(len(test_sets))],
                     ["r-", "r--", "r:"] + ["b-", "g-"][:len(test_sets)],
                     xlabel="Iteration",
-                    ylabel="Fitness")
+                    ylabel="Fitness",
+                    file_name=ARGS.output_directory + "fitnesses.png")        
+        #Plot the mean of the pairwise similarities per generation
+        plot_curves([list(range(len(diversities)))], 
+                    [[x[0] for x in diversities]], 
+                    ["Similarities Mean"], 
+                    ["r-"], 
+                    xlabel="Iteration", ylabel="Mean", 
+                    title=f"Mean pairwise similarity with {similarity_metric} metric per iteration",
+                    vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
+                    vertical_asymptote_label="Best solution found",
+                    file_name=ARGS.output_directory + "mean_plot.png")
+        #Plot the standard deviation of the pairwise similarities per generation
+        plot_curves([list(range(len(diversities)))], 
+                    [[x[1] for x in diversities]], 
+                    ["Similarities Standard Deviation"], 
+                    ["b-"], 
+                    xlabel="Iteration", ylabel="Standard Deviation", 
+                    title=f"Pairwise similarity standard deviation with {similarity_metric} metric per iteration",
+                    vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
+                    vertical_asymptote_label="Best solution found",
+                    file_name=ARGS.output_directory + "std_plot.png")
+        #Plot the variance of the pairwise similarities per generation
+        plot_curves([list(range(len(diversities)))], 
+                    [[x[2] for x in diversities]], 
+                    ["Similarities Standard Deviation"], 
+                    ["b-"], 
+                    xlabel="Iteration", ylabel="Variance", 
+                    title=f"Pairwise similarity variance with {similarity_metric} metric per iteration",
+                    vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
+                    vertical_asymptote_label="Best solution found",
+                    file_name=ARGS.output_directory + "var_plot.png")        
 
     # Done
     best_solutions = population[:return_k_best]
