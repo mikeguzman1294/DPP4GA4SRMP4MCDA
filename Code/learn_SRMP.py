@@ -223,7 +223,7 @@ _ = parser.add_argument("--estimate_decision_maker__return_k_best",
 _ = parser.add_argument("--estimate_decision_maker__population_size",
                         help="Argument 'population_size' of function 'estimate_decision_maker'",
                         type=int,
-                        default=100)
+                        default=300)
 _ = parser.add_argument("--estimate_decision_maker__stop_after_non_evolving",
                         help="Argument 'stop_after_non_evolving' of function 'estimate_decision_maker'",
                         type=int,
@@ -1701,30 +1701,30 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                     ["Similarities Mean"], 
                     ["r-"], 
                     xlabel="Iteration", ylabel="Mean", 
-                    title=f"Mean pairwise similarity with {similarity_metric} metric per iteration",
+                    title=f"Mean pairwise similarity with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
                     vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
                     vertical_asymptote_label="Best solution found",
-                    file_name=ARGS.output_directory + "mean_plot.png")
+                    file_name=ARGS.output_directory + f"mean_plot_{parent_selection_strategy}_{similarity_metric}.png")
         #Plot the standard deviation of the pairwise similarities per generation
         plot_curves([list(range(len(diversities)))], 
                     [[x[1] for x in diversities]], 
                     ["Similarities Standard Deviation"], 
                     ["b-"], 
                     xlabel="Iteration", ylabel="Standard Deviation", 
-                    title=f"Pairwise similarity standard deviation with {similarity_metric} metric per iteration",
+                    title=f"Pairwise similarity standard deviation with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
                     vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
                     vertical_asymptote_label="Best solution found",
-                    file_name=ARGS.output_directory + "std_plot.png")
+                    file_name=ARGS.output_directory + f"std_plot_{parent_selection_strategy}_{similarity_metric}.png")
         #Plot the variance of the pairwise similarities per generation
         plot_curves([list(range(len(diversities)))], 
                     [[x[2] for x in diversities]], 
                     ["Similarities Standard Deviation"], 
                     ["b-"], 
                     xlabel="Iteration", ylabel="Variance", 
-                    title=f"Pairwise similarity variance with {similarity_metric} metric per iteration",
+                    title=f"Pairwise similarity variance with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
                     vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
                     vertical_asymptote_label="Best solution found",
-                    file_name=ARGS.output_directory + "var_plot.png")        
+                    file_name=ARGS.output_directory + f"var_plot_{parent_selection_strategy}_{similarity_metric}.png")        
 
     # Done
     best_solutions = population[:return_k_best]
