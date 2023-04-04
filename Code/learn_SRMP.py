@@ -207,7 +207,7 @@ _ = parser.add_argument("--make_mutation__mutation_partially_reverse_order_proba
 _ = parser.add_argument("--keep_or_drop_children__survival_probability",
                         help="Argument 'survival_probability' of function 'keep_or_drop_children'",
                         type=float,
-                        default=0.02)
+                        default=0.05)
 
 # %%
 # Default arguments of function 'estimate_decision_maker'
@@ -1416,7 +1416,7 @@ def select_solutions (population, nb_solutions=None, strategy=None, sampler=None
     elif strategy == "DPP+roulette" :
 
         # DPP subsetting of one third of a given population
-        nb_solutions_dpp = int(len(population) / 3)
+        nb_solutions_dpp = int(len(population) / 5)
         dpp_indices = sampler.sample_k(nb_solutions_dpp)
         dpp_solutions = [population[i] for i in dpp_indices]
 

@@ -57,7 +57,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--make_mutation__mutation_shrink_profiles_probability" : {"init" : 0.2}, # Fixed
                    "--make_mutation__mutation_expand_profiles_probability" : {"init" : 0.0}, # Fixed
                    "--make_mutation__mutation_partially_reverse_order_probability" : {"init" : 0.2}, # Fixed
-                   "--keep_or_drop_children__survival_probability" : {"init" : 0.02}, # Fixed
+                   "--keep_or_drop_children__survival_probability" : {"init" : 0.05}, # Fixed
                    "--estimate_decision_maker__return_k_best" : {"init" : 1}, # Fixed
                    "--estimate_decision_maker__population_size" : {"init" : 300}, # Fixed
                    "--estimate_decision_maker__stop_after_non_evolving" : {"init" : 50}, # Fixed
