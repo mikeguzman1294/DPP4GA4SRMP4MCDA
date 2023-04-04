@@ -1441,7 +1441,7 @@ def select_solutions (population, nb_solutions=None, strategy=None, sampler=None
     elif strategy == "DPP+roulette" :
 
         # DPP subsetting of one third of a given population
-        nb_solutions_dpp = int(len(population) / 3)
+        nb_solutions_dpp = int(len(population) / 5)
         dpp_indices = sampler.sample_k(nb_solutions_dpp)
         dpp_solutions = [population[i] for i in dpp_indices]
 
@@ -1677,7 +1677,7 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                 
         # ONLY DEV
         end = time.time()
-        print(f'Iteration {nb_iterations} took {end - start} seconds.\nNumber of iterations with no evolution: {nb_iterations_with_no_evolution}\n')
+        #print(f'Iteration {nb_iterations} took {end - start} seconds.\nNumber of iterations with no evolution: {nb_iterations_with_no_evolution}\n')
 
         # Increase iteration number
         nb_iterations += 1

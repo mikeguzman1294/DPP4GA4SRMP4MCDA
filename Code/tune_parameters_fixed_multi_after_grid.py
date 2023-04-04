@@ -44,7 +44,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--mutation_expand_profiles__expand_factor" : {"init" : 0.7}, # Fixed
                    "--mutation_expand_profiles__individual_criterion_proba" : {"init" : 1.0}, # Fixed
                    "--prepare_new_population__elitism_ratio" : {"init" : 0.4}, # Fixed
-                   "--prepare_new_population__random_ratio" : {"init" : 0.1}, # Fixed
+                   "--prepare_new_population__random_ratio" : {"init" : 0.0}, # Fixed CHANGED ORIGINAL 0.1
                    "--select_solutions__nb_solutions" : {"init" : 2}, # Fixed
                    "--select_solutions__strategy" : {"init" : "roulette"}, # Fixed
                    "--select_solutions__similarity_metric" : {"init" : "kendall-tau"}, # Fixed
@@ -58,9 +58,9 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--make_mutation__mutation_shrink_profiles_probability" : {"init" : 0.2}, # Fixed
                    "--make_mutation__mutation_expand_profiles_probability" : {"init" : 0.0}, # Fixed
                    "--make_mutation__mutation_partially_reverse_order_probability" : {"init" : 0.2}, # Fixed
-                   "--keep_or_drop_children__survival_probability" : {"init" : 0.0}, # Fixed
+                   "--keep_or_drop_children__survival_probability" : {"init" : 0.05}, # Fixed CHANGED ORIGINAL 0.0
                    "--estimate_decision_maker__return_k_best" : {"init" : 1}, # Fixed
-                   "--estimate_decision_maker__population_size" : {"init" : 300}, # Fixed ONLY CHANGED ORIGINAL 300
+                   "--estimate_decision_maker__population_size" : {"init" : 300}, # Fixed CHANGED ORIGINAL 300
                    "--estimate_decision_maker__stop_after_non_evolving" : {"init" : 50}, # Fixed
                    "--estimate_decision_maker__check_identical_ratio" : {"init" : 0.1}, # Fixed
                    "--estimate_decision_maker__nb_profiles" : {"init" : 3}} # Fixed
@@ -81,7 +81,7 @@ def run_experiment (arguments, output) :
     for seed in range(NB_TESTS) :
         if VERBOSE : print("%d/%d" % (seed+1, NB_TESTS), end="", flush=True)
         arguments["--random_seed"] = seed
-        #command = "python3 learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments)
+        #command = "python3 learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments) #LINUX
         command = "python learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode("utf-8")
         result = ast.literal_eval(result)
