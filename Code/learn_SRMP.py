@@ -27,8 +27,9 @@ import sys
 import os
 import cProfile
 import time
-import functools # For creaing a user-defined comparison operator
+import functools # For creating a user-defined comparison operator
 from scipy import stats # For Kendall Tau
+from scipy.spatial.distance import pdist, squareform # For L1 / L2 norm
 import subprocess # For importing missing libraries real-time
 try:
     import pyprof2calltree
@@ -40,6 +41,11 @@ try:
 except:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pydpp'])
     from pydpp.dpp import DPP
+try:
+    import tikzplotlib # Required for generating Latex plot scripts
+except:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'tikzplotlib'])
+    import tikzplotlib
 
 # %%
 """
@@ -452,7 +458,7 @@ def plot_matrix (matrix, rows_labels="", cols_labels="", rows_title="", cols_tit
         figure.savefig(file_name, bbox_inches="tight")
 
 # %%
-def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", vertical_asymptote=None, vertical_asymptote_label="", file_name=None) :
+def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", vertical_asymptote=None, vertical_asymptote_label="", file_name=None, latex_name=None) :
 
     ###########################################################################################################
     """
@@ -468,7 +474,8 @@ def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", 
             * title: Figure title.
             * vertical_asymptote: Optional vertical asymptote.
             * vertical_asymptote_label: Label of the optional vertical asymptote.
-            * file_name: Where to save the results.
+            * file_name: Image file name to save the results.
+            * latex_name: Latex script name to save the results.
         Out:
             * None.
     """
@@ -493,10 +500,15 @@ def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", 
         pyplot.legend()
     pyplot.show()    
     
-    # Save
+    # Save pyplot figures into an image file
     if file_name is not None :
         create_directory_for(file_name)
         figure.savefig(file_name, bbox_inches="tight")
+
+    # Save plot as Latex plot script
+    if latex_name is not None :
+        create_directory_for(latex_name)
+        tikzplotlib.save(latex_name, flavor="context")
 
 # %%
 def plot_bars (bars=[], legends=[], xticklabels=[], ylabel="", title="", show_max=True, file_name=None) :
@@ -1254,6 +1266,36 @@ def compute_fitness (solution, expected_results) :
     return fitness
 
 # %%
+def flatten_decision_maker(population):
+
+    ###########################################################################################################
+    """
+        Vectorizes all the genomes of a population and stores them in an array.
+        --
+        In:
+            * Population of solutions of a given generation along with their fitnesses.
+            
+        Out:
+            * flattened_population: Array of vectorized genomes of a population.
+    """
+    ###########################################################################################################
+
+    # Create empty list of vectorized genomes
+    flattened_population = []
+
+    # Vectorize all the genomes and append them to a population list
+    for dm in range(len(population)):
+      profile = population[dm][1]["profiles"].flatten()
+      array_weight = numpy.concatenate((profile, population[dm][1]["weights"]))
+      flattened_population.append(array_weight)
+
+    # Convert the data into a numpy array
+    flattened_population = numpy.array(flattened_population)
+    
+    #Done
+    return flattened_population
+
+# %%
 def rank_decision_maker_alternatives (decision_maker, alternatives) :
 
     ###########################################################################################################
@@ -1338,6 +1380,17 @@ def compute_similarity_matrix (solutions_representation, metric) :
     elif metric == "spearman-rho" :
         similarity_matrix = numpy.array( [ [ ( (stats.spearmanr(p1, p2)[0] + 1) / 2  ) for p2 in solutions_representation ] for p1 in solutions_representation ] )
 
+    # Compute similarity matrix of all decision makers Manhattan distance pairwise evaluation
+    elif metric == "l1-norm" :
+        distances = squareform( pdist(solutions_representation, metric='cityblock') )
+        normalized_matrix = distances / distances.max()
+        similarity_matrix = 1 - normalized_matrix
+
+    # Compute similarity matrix of all decision makers' Euclidean distance pairwise evaluation
+    elif metric == "l2-norm" :
+        distances = squareform( pdist(solutions_representation, metric='euclidean') )
+        similarity_matrix = 1 / numpy.exp(distances)
+
     # Weird choice
     else :
         raise Exception("Unimplemented metric '" + metric + "' for function 'compute_similarity_matrix'")
@@ -1395,7 +1448,7 @@ def create_kDPP_model (population, metric, alternatives=None) :
     if metric in {"kendall-tau", "spearman-rho"} :
         dpp_input = compute_population_rankings(population, alternatives)
     else:
-        dpp_input = population
+        dpp_input = flatten_decision_maker(population)
 
     # Fit the data into a kDPP model instance and compute the internal kernel
     dpp = DPP(dpp_input)
@@ -1440,7 +1493,7 @@ def select_solutions (population, nb_solutions=None, strategy=None, sampler=None
     # Combine DPP and roulette strategies to first look for diversity and then prioritize fitness among parents
     elif strategy == "DPP+roulette" :
 
-        # DPP subsetting of one third of a given population
+        # DPP subsetting of 20% of a given population
         nb_solutions_dpp = int(len(population) / 5)
         dpp_indices = sampler.sample_k(nb_solutions_dpp)
         dpp_solutions = [population[i] for i in dpp_indices]
@@ -1704,7 +1757,8 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                     title=f"Mean pairwise similarity with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
                     vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
                     vertical_asymptote_label="Best solution found",
-                    file_name=ARGS.output_directory + f"mean_plot_{parent_selection_strategy}_{similarity_metric}.png")
+                    file_name=ARGS.output_directory + f"mean_plot_{parent_selection_strategy}_{similarity_metric}.png",
+                    latex_name=ARGS.output_directory + f"mean_plot_{parent_selection_strategy}_{similarity_metric}.tex")
         #Plot the standard deviation of the pairwise similarities per generation
         plot_curves([list(range(len(diversities)))], 
                     [[x[1] for x in diversities]], 
@@ -1714,17 +1768,19 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                     title=f"Pairwise similarity standard deviation with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
                     vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
                     vertical_asymptote_label="Best solution found",
-                    file_name=ARGS.output_directory + f"std_plot_{parent_selection_strategy}_{similarity_metric}.png")
+                    file_name=ARGS.output_directory + f"std_plot_{parent_selection_strategy}_{similarity_metric}.png",
+                    latex_name=ARGS.output_directory + f"std_plot_{parent_selection_strategy}_{similarity_metric}.tex")
         #Plot the variance of the pairwise similarities per generation
         plot_curves([list(range(len(diversities)))], 
                     [[x[2] for x in diversities]], 
-                    ["Similarities Standard Deviation"], 
+                    ["Similarities Variance"], 
                     ["b-"], 
                     xlabel="Iteration", ylabel="Variance", 
                     title=f"Pairwise similarity variance with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
                     vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
                     vertical_asymptote_label="Best solution found",
-                    file_name=ARGS.output_directory + f"var_plot_{parent_selection_strategy}_{similarity_metric}.png")        
+                    file_name=ARGS.output_directory + f"var_plot_{parent_selection_strategy}_{similarity_metric}.png",
+                    latex_name=ARGS.output_directory + f"var_plot_{parent_selection_strategy}_{similarity_metric}.tex")           
 
     # Done
     best_solutions = population[:return_k_best]
