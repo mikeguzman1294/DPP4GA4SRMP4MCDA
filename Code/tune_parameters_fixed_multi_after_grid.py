@@ -35,6 +35,7 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--debug_mode" : {"init" : False}, # Fixed
                    "--random_seed" : {"init" : None}, # Will be set at hand
                    "--output_directory" : {"init" : "."}, # Fixed
+                   "--save_diversity" : {"init" : True}, # Fixed
                    "--mutation_random_profile_perturbation__perturbation_scale" : {"init" : 0.1}, # Fixed
                    "--mutation_random_profile_perturbation__individual_criterion_proba" : {"init" : 1.0}, # Fixed
                    "--mutation_random_weights_perturbation__perturbation_scale" : {"init" : 0.1}, # Fixed

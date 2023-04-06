@@ -20,6 +20,7 @@
 import numpy
 import scipy.sparse as sparse
 import matplotlib.pyplot as pyplot
+import pandas as pd
 import argparse
 import json
 import ast
@@ -94,6 +95,10 @@ _ = parser.add_argument("--output_directory",
                         help="Directory where to produce figures",
                         type=str,
                         default="../output/learn_SRMP/")
+_ = parser.add_argument("--save_diversity",
+                        help="To save diversity data into a csv",
+                        type=ast.literal_eval,
+                        default=False)
 
 # %%
 # Default arguments of function 'mutation_random_profile_perturbation'
@@ -160,7 +165,7 @@ _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
                         choices=["roulette", "DPP", "DPP+roulette"],
-                        default="DPP+roulette")
+                        default="roulette")
 _ = parser.add_argument("--select_solutions__similarity_metric",
                         help="Argument 'metric' of function 'compute_similarity_matrix'",
                         type=str,
@@ -351,6 +356,34 @@ def create_directory_for (file_name) :
     os.makedirs(dir_name, exist_ok=True)
 
 # %%
+def write_to_csv (data, file_name, separator=";") :
+
+    ###########################################################################################################
+    """
+        Saves experimental data into a csv file in column form.
+        --
+        In:
+            * data: List of experimental data to append to a csv file.
+            * file_name: Directory to create, or csv file for which we want to create a directory.
+        Out:
+            * None.
+    """
+    ###########################################################################################################
+
+    # If file already exists, append new a column
+    if os.path.exists(file_name) :
+        df = pd.read_csv(file_name, sep=separator)
+        new_column = pd.DataFrame({f'EX_{df.shape[1]+1}': data})
+        df = df.merge(new_column, left_index=True, right_index=True)
+
+    # Create a new dataframe if file is not found
+    else :
+        df = pd.DataFrame({'EX_1': data})
+
+    # Save
+    df.to_csv(file_name, index=False, sep=separator)
+
+# %%
 """
 <h2>Plotting</h2>
 """
@@ -498,7 +531,7 @@ def plot_curves (xs, ys, legends=[], styles=[], xlabel="", ylabel="", title="", 
     if vertical_asymptote is not None:
         pyplot.axvline(x=vertical_asymptote, linewidth=2, color='green', label=vertical_asymptote_label)
         pyplot.legend()
-    pyplot.show()    
+    #pyplot.show()    
     
     # Save pyplot figures into an image file
     if file_name is not None :
@@ -1648,11 +1681,12 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
     check_identical_number = max(1, int(check_identical_ratio * int(elitism_ratio * population_size)))
     parent_selection_strategy = get_arg_value("select_solutions__strategy", None)
     similarity_metric = get_arg_value("select_solutions__similarity_metric", None)
-    
+
     # Prepare information for summary
     if ARGS.debug_mode :
         all_min_fitnesses, all_average_fitnesses, all_max_fitnesses = [], [], []
         test_sets_fitnesses = [[] for i in range(len(test_sets))]
+    if ARGS.debug_mode or ARGS.save_diversity :    
         diversities = []
     
     # Generate an initial population, sorted in decreasing fitness
@@ -1678,7 +1712,8 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
         
         # We stop when all optima are found, or if the best solution does not evolve for some time
         sub_population_bests = [population[i][0] for i in range(check_identical_number)]
-        if sum(sub_population_bests) == check_identical_number or nb_iterations_with_no_evolution == stop_after_non_evolving :
+        #if sum(sub_population_bests) == check_identical_number or nb_iterations_with_no_evolution == stop_after_non_evolving :
+        if nb_iterations == 200 :
             break
             
         # We initiate a new population based on the previous one
@@ -1691,7 +1726,7 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
             sampler = create_kDPP_model(population, similarity_metric, alternatives=alternatives)            
         
         # Measure diversity given the metric's similarity matrix mean coeficient
-        if ARGS.debug_mode :
+        if ARGS.debug_mode or ARGS.save_diversity :  
             # We extract the similarity matrix from the sampler if it exists otherwise we compute it
             similarity_matrix = sampler.A if sampler is not None else create_kDPP_model(population, similarity_metric, alternatives=alternatives).A
             diversities.append(compute_diversity(similarity_matrix))
@@ -1755,8 +1790,8 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                     ["r-"], 
                     xlabel="Iteration", ylabel="Mean", 
                     title=f"Mean pairwise similarity with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
-                    vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
-                    vertical_asymptote_label="Best solution found",
+                    #vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
+                    #vertical_asymptote_label="Best solution found",
                     file_name=ARGS.output_directory + f"mean_plot_{parent_selection_strategy}_{similarity_metric}.png",
                     latex_name=ARGS.output_directory + f"mean_plot_{parent_selection_strategy}_{similarity_metric}.tex")
         #Plot the standard deviation of the pairwise similarities per generation
@@ -1766,8 +1801,8 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                     ["b-"], 
                     xlabel="Iteration", ylabel="Standard Deviation", 
                     title=f"Pairwise similarity standard deviation with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
-                    vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
-                    vertical_asymptote_label="Best solution found",
+                    #vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
+                    #vertical_asymptote_label="Best solution found",
                     file_name=ARGS.output_directory + f"std_plot_{parent_selection_strategy}_{similarity_metric}.png",
                     latex_name=ARGS.output_directory + f"std_plot_{parent_selection_strategy}_{similarity_metric}.tex")
         #Plot the variance of the pairwise similarities per generation
@@ -1777,10 +1812,20 @@ def estimate_decision_maker (expected_results, alternatives, test_sets=[], retur
                     ["b-"], 
                     xlabel="Iteration", ylabel="Variance", 
                     title=f"Pairwise similarity variance with {similarity_metric} metric per iteration\nParent selection strategy: {parent_selection_strategy}",
-                    vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
-                    vertical_asymptote_label="Best solution found",
+                    #vertical_asymptote=(nb_iterations-1)-nb_iterations_with_no_evolution,
+                    #vertical_asymptote_label="Best solution found",
                     file_name=ARGS.output_directory + f"var_plot_{parent_selection_strategy}_{similarity_metric}.png",
-                    latex_name=ARGS.output_directory + f"var_plot_{parent_selection_strategy}_{similarity_metric}.tex")           
+                    latex_name=ARGS.output_directory + f"var_plot_{parent_selection_strategy}_{similarity_metric}.tex") 
+    if ARGS.save_diversity :
+        #Save the mean of the pairwise similarities per generation
+        write_to_csv(data=[x[0] for x in diversities],
+                     file_name=f"mean_data_{parent_selection_strategy}_{similarity_metric}.csv")
+        #Save the standard deviation of the pairwise similarities per generation
+        write_to_csv(data=[x[1] for x in diversities],
+                     file_name=f"std_data_{parent_selection_strategy}_{similarity_metric}.csv")
+        #Save the variance of the pairwise similarities per generation
+        write_to_csv(data=[x[2] for x in diversities],
+                     file_name=f"var_data_{parent_selection_strategy}_{similarity_metric}.csv")        
 
     # Done
     best_solutions = population[:return_k_best]
