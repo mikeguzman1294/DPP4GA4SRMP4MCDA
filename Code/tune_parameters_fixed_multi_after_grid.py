@@ -23,7 +23,7 @@ import random
 NB_TESTS = 10
 VERBOSE = True
 #OUTPUT = "./tune_parameters_fixed_multi_after_grid.csv"
-OUTPUT = "tune_parameters_fixed_multi_after_grid_KT.csv"
+OUTPUT = "tune_parameters_fixed_multi_after_grid_l1-norm.csv"
 
 # Hyperparameters to optimize
 HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
@@ -44,11 +44,11 @@ HYPERPARAMETERS = {"--nb_criteria" : {"init" : 11}, # Fixed
                    "--mutation_shrink_profiles__individual_criterion_proba" : {"init" : 1.0}, # Fixed
                    "--mutation_expand_profiles__expand_factor" : {"init" : 0.7}, # Fixed
                    "--mutation_expand_profiles__individual_criterion_proba" : {"init" : 1.0}, # Fixed
-                   "--prepare_new_population__elitism_ratio" : {"init" : 0.4}, # Fixed
+                   "--prepare_new_population__elitism_ratio" : {"init" : 0.1}, # Fixed
                    "--prepare_new_population__random_ratio" : {"init" : 0.0}, # Fixed CHANGED ORIGINAL 0.1
                    "--select_solutions__nb_solutions" : {"init" : 2}, # Fixed
-                   "--select_solutions__strategy" : {"init" : "roulette"}, # Fixed
-                   "--select_solutions__similarity_metric" : {"init" : "kendall-tau"}, # Fixed
+                   "--select_solutions__strategy" : {"init" : "DPP+roulette"}, # Fixed
+                   "--select_solutions__similarity_metric" : {"init" : "l1-norm"}, # Fixed
                    "--make_crossover__crossover_swap_weights_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_orders_probability" : {"init" : 0.0}, # Fixed
                    "--make_crossover__crossover_swap_profiles_probability" : {"init" : 0.0}, # Fixed
@@ -79,7 +79,7 @@ def run_experiment (arguments, output) :
     # Run command for each seed
     perfs = {"train" : [], "test_1" : [], "test_2" : [], "time" : []}
     if VERBOSE : print(arguments, flush=True)
-    for seed in range(NB_TESTS) :
+    for seed in range(2, NB_TESTS) :
         if VERBOSE : print("%d/%d" % (seed+1, NB_TESTS), end="", flush=True)
         arguments["--random_seed"] = seed
         #command = "python3 learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments) #LINUX
