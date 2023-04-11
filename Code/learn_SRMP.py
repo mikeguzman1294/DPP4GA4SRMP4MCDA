@@ -164,8 +164,8 @@ _ = parser.add_argument("--select_solutions__nb_solutions",
 _ = parser.add_argument("--select_solutions__strategy",
                         help="Argument 'strategy' of function 'select_solutions'",
                         type=str,
-                        choices=["roulette", "DPP", "DPP+roulette"],
-                        default="roulette")
+                        choices=["roulette", "DPP", "DPP+roulette", "uniform"],
+                        default="uniform")
 _ = parser.add_argument("--select_solutions__similarity_metric",
                         help="Argument 'metric' of function 'compute_similarity_matrix'",
                         type=str,
@@ -1536,6 +1536,11 @@ def select_solutions (population, nb_solutions=None, strategy=None, sampler=None
         probabilities /= numpy.sum(probabilities)
         selected_indices = numpy.random.choice(range(len(dpp_solutions)), nb_solutions, p=probabilities, replace=False)
         selected_solutions = [dpp_solutions[i] for i in selected_indices]
+
+    # Probability of being chosen follows a uniform probability distribution
+    elif strategy == "uniform" :
+        selected_indices = numpy.random.choice(range(len(population)), nb_solutions, replace=False)
+        selected_solutions = [population[i] for i in selected_indices]
 
     # Weird choice
     else :
