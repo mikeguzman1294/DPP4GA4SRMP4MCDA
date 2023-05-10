@@ -79,7 +79,7 @@ def run_experiment (arguments, output) :
     # Run command for each seed
     perfs = {"train" : [], "test_1" : [], "test_2" : [], "time" : []}
     if VERBOSE : print(arguments, flush=True)
-    for seed in range(2, NB_TESTS) :
+    for seed in range(NB_TESTS) :
         if VERBOSE : print("%d/%d" % (seed+1, NB_TESTS), end="", flush=True)
         arguments["--random_seed"] = seed
         #command = "python3 learn_SRMP.py " + " ".join(arg + " " + str(arguments[arg]) for arg in arguments) #LINUX
