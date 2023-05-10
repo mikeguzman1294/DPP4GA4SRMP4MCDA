@@ -10,6 +10,9 @@ The corresponding scientific paper submitted to GRETSI conference 2023 can be fo
 
 ***
 
+![Poster](Documentation/DPP_Poster.png)
+
+
 **Abstract** – *Multi-criteria decision aid is a research field aimed at providing decision-makers with tools to assist in decision-making
 based on multivariate data. Among these tools, the Ranking with Multiple Profiles (RMP) model allows for ordering a set of
 alternatives by pairwise comparison to reference profiles. The optimal configuration of such a model can be complex due to multiple
